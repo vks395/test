@@ -10,45 +10,52 @@ on:
     branches: [ "master" ]
 
 env:
-  # Define variables for your solution and web project files.
-  # IMPORTANT: Replace '**/WebApplication1GIT.sln' with the CORRECT relative path
-  # and exact filename of your solution file within your repository.
-  # For example:
-  # If your solution is at the root: 'WebApplication1GIT.sln'
-  # If your solution is in a 'src' folder: 'src/WebApplication1GIT.sln'
-  # If your solution is in 'src/MyProject/': 'src/MyProject/WebApplication1GIT.sln'
-  SOLUTION_FILE: '**/WebApplication1GIT.sln' # <--- IMPORTANT: CORRECT THIS PATH
-  WEB_PROJECT_FILE: '**/WebApplication1GIT.csproj' # <--- IMPORTANT: CORRECT THIS PATH
+  # Paths to your solution and web project files.
+  # These paths are now confirmed from your repository screenshot.
+  SOLUTION_FILE: 'WebApplication1GIT.sln' # Corrected path: It's in the root
+  WEB_PROJECT_FILE: 'WebApplication1GIT/WebApplication1GIT.csproj' # Corrected path: Inside the folder
   BUILD_CONFIGURATION: 'Release' # Standard build configuration
 
 jobs:
   build:
+    # ASP.NET Framework applications require a Windows runner
     runs-on: windows-latest
 
     steps:
     - uses: actions/checkout@v4
       with:
-        fetch-depth: 0
+        fetch-depth: 0 # Useful for GitVersion or other tools that need full history
 
     - name: Setup MSBuild
+      # This action sets up the Visual Studio build tools environment on the Windows runner.
       uses: microsoft/setup-msbuild@v2
 
     - name: Setup NuGet.exe
+      # This action sets up the NuGet command-line tool, essential for .NET Framework package restore.
       uses: NuGet/setup-nuget@v2
 
     - name: Restore dependencies (NuGet)
+      # Restores NuGet packages for your solution using the precise path.
       run: nuget restore ${{ env.SOLUTION_FILE }}
 
     - name: Build Web Application
+      # Builds your ASP.NET Web Application using MSBuild.
+      # /p:DeployOnBuild=true and /p:WebPublishMethod=Package create a deployable .zip package.
+      # The package will be placed in the GitHub workspace and named after the Git SHA for uniqueness.
       run: |
         msbuild ${{ env.SOLUTION_FILE }} /p:Configuration=${{ env.BUILD_CONFIGURATION }} /p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:DesktopBuildPackageLocation="${{ github.workspace }}\${{ github.sha }}.zip"
 
     - name: Test (Optional - Placeholder)
+      # For .NET Framework, running tests typically involves vstest.console.exe.
+      # You'll need to specify the path to your test DLLs.
+      # Example: "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\IDE\Extensions\TestPlatform\vstest.console.exe" "${{ github.workspace }}\YourTestProject\bin\${{ env.BUILD_CONFIGURATION }}\YourTestProject.dll"
       run: echo "No automated tests configured. If you have tests, add your vstest.console.exe command here."
 
     - name: Upload Build Artifact
+      # Uploads the generated web application .zip package as an artifact.
+      # This artifact can then be used by a subsequent deployment job or manually downloaded.
       uses: actions/upload-artifact@v4
       with:
         name: web-app-package
         path: ${{ github.workspace }}\${{ github.sha }}.zip
-        retention-days: 7
+        retention-days: 7 # Defines how long to keep the artifact
