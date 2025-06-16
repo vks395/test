@@ -28,7 +28,11 @@ jobs:
 
     - name: Setup MSBuild
       # This action sets up the Visual Studio build tools environment on the Windows runner.
+      # Explicitly specifying '2019' for vs-version can sometimes resolve issues with
+      # older .NET Framework versions by providing a more compatible environment.
       uses: microsoft/setup-msbuild@v2
+      with:
+        vs-version: '2019' # <--- ADDED: Specify Visual Studio 2019 version
 
     - name: Setup NuGet.exe
       # This action sets up the NuGet command-line tool, essential for .NET Framework package restore.
