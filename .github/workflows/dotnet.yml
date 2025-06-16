@@ -44,10 +44,12 @@ jobs:
       # Builds your ASP.NET Web Application using MSBuild.
       # /p:DeployOnBuild=true and /p:WebPublishMethod=Package create a deployable .zip package.
       # /p:FrameworkPathOverride: Explicitly tells MSBuild where to find .NET Framework 4.5 reference assemblies.
-      # This should resolve the MSB3644 error.
+      # /p:DisableImplicitFrameworkReferences=true: Prevents MSBuild from looking for framework references
+      # in other default locations, forcing it to use the specified FrameworkPathOverride and project references.
+      # This should help resolve 'mscorlib.dll' conflicts and "could not be found" errors.
       # The package will be placed in the GitHub workspace and named after the Git SHA for uniqueness.
       run: |
-        msbuild ${{ env.SOLUTION_FILE }} /p:Configuration=${{ env.BUILD_CONFIGURATION }} /p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:DesktopBuildPackageLocation="${{ github.workspace }}\${{ github.sha }}.zip" /p:FrameworkPathOverride="C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5"
+        msbuild ${{ env.SOLUTION_FILE }} /p:Configuration=${{ env.BUILD_CONFIGURATION }} /p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:DesktopBuildPackageLocation="${{ github.workspace }}\${{ github.sha }}.zip" /p:FrameworkPathOverride="C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5" /p:DisableImplicitFrameworkReferences=true
 
     - name: Test (Optional - Placeholder)
       # For .NET Framework, running tests typically involves vstest.console.exe.
