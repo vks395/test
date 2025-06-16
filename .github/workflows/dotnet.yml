@@ -1,5 +1,7 @@
-# .github/workflows/main.yml
-name: ASP.NET Framework CI/CD
+# This workflow will build a .NET Framework project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-net
+
+name: .NET Framework Build
 
 on:
   push:
@@ -9,8 +11,8 @@ on:
 
 env:
   # Define variables for your solution and web project files.
-  # Adjust these paths if your solution or project files are not at the root
-  # Based on your web.config, the project name is likely WebApplication1GIT
+  # IMPORTANT: Replace 'YourProjectName' with your actual solution and project names.
+  # Based on your web.config, 'WebApplication1GIT' is a strong candidate.
   SOLUTION_FILE: '**/WebApplication1GIT.sln' # <--- IMPORTANT: Verify this path and name
   WEB_PROJECT_FILE: '**/WebApplication1GIT.csproj' # <--- IMPORTANT: Verify this path and name
   BUILD_CONFIGURATION: 'Release' # Standard build configuration
@@ -21,76 +23,40 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
       with:
-        fetch-depth: 0 # Fetch all history for GitVersion (if used) or other tools
+        fetch-depth: 0 # Useful for GitVersion or other tools that need full history
 
     - name: Setup MSBuild
-      # This action sets up the Visual Studio build tools environment
+      # This action sets up the Visual Studio build tools environment on the Windows runner.
       uses: microsoft/setup-msbuild@v2
 
     - name: Setup NuGet.exe
-      # This action sets up the NuGet command-line tool
+      # This action sets up the NuGet command-line tool, essential for .NET Framework package restore.
       uses: NuGet/setup-nuget@v2
 
-    - name: Restore NuGet packages
-      # Restores packages for your solution using NuGet.exe
+    - name: Restore dependencies (NuGet)
+      # Restores NuGet packages for your solution.
       run: nuget restore ${{ env.SOLUTION_FILE }}
 
     - name: Build Web Application
-      # Builds the ASP.NET web application using MSBuild
-      # /p:DeployOnBuild=true: Tells MSBuild to create a deployable package
-      # /p:WebPublishMethod=Package: Specifies the package method
-      # /p:PackageAsSingleFile=true: Packages the output into a single zip file
-      # /p:DesktopBuildPackageLocation: Specifies the output path for the zip file
-      # The package will be named after the Git SHA (commit hash)
+      # Builds your ASP.NET Web Application using MSBuild.
+      # /p:DeployOnBuild=true and /p:WebPublishMethod=Package create a deployable .zip package.
+      # The package will be placed in the GitHub workspace and named after the Git SHA for uniqueness.
       run: |
         msbuild ${{ env.SOLUTION_FILE }} /p:Configuration=${{ env.BUILD_CONFIGURATION }} /p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:DesktopBuildPackageLocation="${{ github.workspace }}\${{ github.sha }}.zip"
 
-    - name: Run Tests (Optional)
-      # If you have unit tests, you'll need a separate step to run them.
-      # You might use VSTest.Console.exe or a specific test runner.
-      # Example (requires a test project in your solution, update path and DLL name):
-      # run: |
-      #   echo "Locating vstest.console.exe..."
-      #   # Find the path to vstest.console.exe (it might vary slightly based on VS version/edition)
-      #   # A common path: "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\IDE\Extensions\TestPlatform\vstest.console.exe"
-      #   # Or you might need to use 'vstest.console.exe' directly if it's in the PATH.
-      #   "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\IDE\Extensions\TestPlatform\vstest.console.exe" "${{ github.workspace }}\Tests\bin\${{ env.BUILD_CONFIGURATION }}\YourTestProject.dll"
-      echo "No tests configured. If you have tests, uncomment and configure the 'Run Tests' step."
+    - name: Test (Optional - Placeholder)
+      # For .NET Framework, running tests typically involves vstest.console.exe.
+      # You'll need to specify the path to your test DLLs.
+      # Example: "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\IDE\Extensions\TestPlatform\vstest.console.exe" "${{ github.workspace }}\YourTestProject\bin\${{ env.BUILD_CONFIGURATION }}\YourTestProject.dll"
+      run: echo "No automated tests configured. If you have tests, add your vstest.console.exe command here."
 
     - name: Upload Build Artifact
-      # Uploads the generated web application package as an artifact
+      # Uploads the generated web application .zip package as an artifact.
+      # This artifact can then be used by a subsequent deployment job or manually downloaded.
       uses: actions/upload-artifact@v4
       with:
         name: web-app-package
-        path: ${{ github.workspace }}\${{ github.sha }}.zip # Path to your packaged web app
-        retention-days: 7 # How long to keep the artifact
-
-  # --- Continuous Deployment (CD) Stage (Example) ---
-  deploy:
-    needs: build # This job depends on the 'build' job completing successfully
-    runs-on: windows-latest # Or a different runner if deploying to a different environment
-    environment: Production # Link to a GitHub environment for deployment
-    if: github.ref == 'refs/heads/master' # Deploy only from the master branch
-
-    steps:
-    - name: Download Build Artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: web-app-package
-        path: ${{ github.workspace }}\deploy_package
-
-    - name: Deploy to Azure Web App (Example)
-      # This is an example for deploying to Azure App Service.
-      # You'll need to configure your Azure credentials as GitHub Secrets.
-      # Create a secret named AZURE_WEBAPP_PUBLISH_PROFILE in your repository settings.
-      uses: azure/webapps-deploy@v2
-      with:
-        app-name: 'your-azure-app-service-name' # <--- IMPORTANT: Replace with your Azure App Service name
-        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-        package: ${{ github.workspace }}\deploy_package\${{ github.sha }}.zip
-
-    # For deployment to other environments (e.g., on-premise IIS),
-    # you would use different actions or custom scripts.
+        path: ${{ github.workspace }}\${{ github.sha }}.zip
+        retention-days: 7 # Defines how long to keep the artifact
